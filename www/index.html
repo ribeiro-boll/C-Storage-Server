@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Armazenamento de Arquivos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>📁 Sistema de Arquivos</h1>
+        <div class="config">
+            <label for="serverUrl">URL do Servidor:</label>
+            <input type="text" id="serverUrl" value="http://localhost:8080" placeholder="http://localhost:8080">
+        </div>
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Clique aqui ou arraste arquivos para upload</div>
+            <button class="btn" onclick="document.getElementById('fileInput').click()">
+                Selecionar Arquivo
+            </button>
+        </div>
+        <input type="file" id="fileInput" class="file-input" multiple>
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="file-info" id="fileInfo">
+            <h3>Informações do Arquivo:</h3>
+            <div class="info-item">
+                <span class="info-label">Nome:</span>
+                <span class="info-value" id="fileName"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Tamanho:</span>
+                <span class="info-value" id="fileSize"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Tipo:</span>
+                <span class="info-value" id="fileType"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">ID Único:</span>
+                <span class="info-value" id="fileId"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">IP do Cliente:</span>
+                <span class="info-value" id="clientIp"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Data/Hora:</span>
+                <span class="info-value" id="uploadTime"></span>
+            </div>
+            <button class="btn" onclick="uploadFile()" id="uploadBtn">
+                🚀 Fazer Upload
+            </button>
+        </div>
+        <div class="status" id="status"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,4 +1,3 @@
-
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -14,6 +13,21 @@ pthread_mutex_t tsk_mutex;
 pthread_cond_t tsk_thcond;
 
 int taskquant = 0;
+
+
+/*
+
+0 - html
+1 - js
+2 - css
+3 - ico
+
+
+image/x-icon
+
+*/
+
+char *mimeTypes[] = {"text/html","text/javascript","text/css","image/x-icon"};
 
 //-------------estrutura das linked lists----------
 
@@ -43,8 +57,10 @@ void addTask(char *typeConnection,char *what_frontend_wants,int socketfd_cliente
     newtask->tsk_what_frontend_wants = strdup(what_frontend_wants);
     newtask->tsk_socketfd_cliente = socketfd_cliente;
     newtask->tsk_socketfd_servidor = socketfd_servidor;
-    if (final == NULL)
+    newtask->tsk_next = NULL;
+    if (final == NULL){
         inicio = newtask;
+    }
     else
         final->tsk_next = newtask;
     final = newtask;
@@ -109,19 +125,134 @@ char* http_parser_of_what_do_frontend_wants(char buffer[]){
 
 // ----------------- processamento do html----------------
 
+long int get_file_bytes(char* path){
+    FILE* arq = fopen(path, "r");
+    long long int nmr_bytes = 0;
+    while (getc(arq) != EOF) {
+        nmr_bytes++;
+    }
+    rewind(arq);
+    fclose(arq);
+    return nmr_bytes;
+}
+
+void send_text(char *path,int socketfd_client, char* mimeType){
+    char header[] = "HTTP/1.1 200 OK\r\nContent-Type: " ;
+    char header_buffer[4096];
+    long int bytes = get_file_bytes(path);
+    snprintf(header_buffer, 4096, "%s%s; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %ld\r\n\r\n",header,mimeTypes,bytes);
+    send(socketfd_client, header_buffer, strlen(header_buffer), 0);
+    //--------- file sending part ----------
+    int contador = 0;
+    FILE *arq = fopen(path, "r");
+    char ch = 'a', file_buffer[8192];
+
+    while (ch!=EOF) {
+        if (contador > 8190){
+            ch = getc(arq);
+            file_buffer[contador] = ch;
+            send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
+            contador = 0;    
+            memset(file_buffer, 0, 8192);
+        }
+        else {
+            ch = getc(arq);
+            file_buffer[contador] = ch;
+            contador++;
+        }
+    }
+    if (contador>0){
+        send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
+    }
+    close(socketfd_client);
+    rewind(arq);
+    fclose(arq);
+}
+
+void send_file(char *path,int socketfd_client, char *mimeType){
+    char header[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " ;
+    char header_buffer[4096];
+    long int bytes = get_file_bytes(path);
+    snprintf(header_buffer, 4096, "%s%ld\r\n\r\n",header,bytes);
+    send(socketfd_client, header_buffer, strlen(header_buffer), 0);
+    //--------- file sending part ----------
+    int contador = 0;
+    FILE *arq = fopen(path, "rb");
+    char ch = 'a', file_buffer[8192];
+
+    while (ch!=EOF) {
+        if (contador > 8190){
+            ch = getc(arq);
+            file_buffer[contador] = ch;
+            send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
+            contador = 0;    
+            memset(file_buffer, 0, 8192);
+        }
+        else {
+            ch = getc(arq);
+            file_buffer[contador] = ch;
+            contador++;
+        }
+    }
+    if (contador>0){
+        send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
+    }
+    rewind(arq);
+    fclose(arq);
+}
+
+
 
 // -------------------------------------------------------
 
 void *routine(void* arg){
-    pthread_mutex_lock(&tsk_mutex);
-    while (taskquant == 0){
-        pthread_cond_wait(&tsk_thcond, &tsk_mutex);
+    while (1) {
+        pthread_mutex_lock(&tsk_mutex);
+        while (taskquant == 0){
+            pthread_cond_wait(&tsk_thcond, &tsk_mutex);
+        }
+        Task *temp = inicio;
+        printf("%s %s | %d %d\n",temp->tsk_task_connection, temp->tsk_what_frontend_wants,temp->tsk_socketfd_servidor,temp->tsk_socketfd_cliente);
+        taskquant--;
+
+        if (inicio->tsk_next == NULL){
+            inicio  = NULL;
+            final = NULL;
+        }
+        else {
+            inicio = inicio->tsk_next;
+        }
+        
+        
+        pthread_mutex_unlock(&tsk_mutex); 
+        if (strcmp(temp->tsk_task_connection, "GET") == 0){
+            if (strcmp(temp->tsk_what_frontend_wants,"/") == 0){
+                send_text("www/index.html", temp->tsk_socketfd_cliente,mimeTypes[0]);
+                send_file("nerd.ico", temp->tsk_socketfd_cliente,mimeTypes[3]);
+                close(temp->tsk_socketfd_cliente);
+            }
+            
+            else if (strcmp(temp->tsk_what_frontend_wants,"/style.css") == 0){
+                send_text("www/style.css",temp->tsk_socketfd_cliente,mimeTypes[2]);
+                close(temp->tsk_socketfd_cliente);
+            }
+
+            else if (strcmp(temp->tsk_what_frontend_wants,"/script.js") == 0){
+                send_text("www/script.js", temp->tsk_socketfd_cliente,mimeTypes[2]);
+                close(temp->tsk_socketfd_cliente);
+            }
+        }
+
+        else if (strcmp(temp->tsk_task_connection, "POST") == 0){
+
+        }
+        free(temp->tsk_task_connection);
+        free(temp->tsk_what_frontend_wants);
+        free(temp);
+        pthread_cond_broadcast(&tsk_thcond);
+        //
+        // free(temp);
     }
-    if (strcmp(inicio->tsk_task_connection, "GET") == 0){}
-    
-    else if (strcmp(inicio->tsk_task_connection, "POST") == 0){}
-    
-    
 }
 
 /*
@@ -141,7 +272,7 @@ int main(){
     int socketfd,socket_clientfd;
 
     netinfo.addr = "127.0.0.1";
-    netinfo.port = "8000";
+    netinfo.port = "8080";
 
     struct sockaddr_storage client_conf;
     memset(&client_conf, 0, sizeof(client_conf));
@@ -152,7 +283,7 @@ int main(){
 
     
     for (int i = 0; i<8; i++) {
-        //pthread_create(tid[i], NULL, routine, inicio);
+        pthread_create(&tid[i], NULL, routine, NULL);
     }
 
     while (1) {
@@ -165,8 +296,9 @@ int main(){
         
         addTask(tipo_conexao, nome_arquivo, socket_clientfd,socketfd);
         taskquant++;
+        
+        pthread_cond_signal(&tsk_thcond);
     }
-    Task *temp = inicio;
     getc(stdin);
 }
 
