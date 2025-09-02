@@ -102,15 +102,12 @@ int create_socket(int *socketfd){
     return 0;
 }
 
-
-
 char* http_parser_of_type_request(char buffer[]){ // mais facil ne kkkkkkkk
     char ch1[1] = {'\n'},ch2[1] = {' '},*temp = strdup(buffer);;
     char *token = strtok(temp, ch1);
     
     return token;
 }
-
 
 char* http_parser_of_what_do_frontend_wants(char buffer[]){
     char ch1[1] = {'\n'},ch2[1] = {' '},*temp = strdup(buffer);
@@ -140,7 +137,7 @@ void send_text(char *path,int socketfd_client, char* mimeType){
     char header[] = "HTTP/1.1 200 OK\r\nContent-Type: " ;
     char header_buffer[4096];
     long int bytes = get_file_bytes(path);
-    snprintf(header_buffer, 4096, "%s%s; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %ld\r\n\r\n",header,mimeTypes,bytes);
+    snprintf(header_buffer, 4096, "%s%s; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %ld\r\n\r\n",header,mimeType,bytes);
     send(socketfd_client, header_buffer, strlen(header_buffer), 0);
     //--------- file sending part ----------
     int contador = 0;
@@ -170,34 +167,33 @@ void send_text(char *path,int socketfd_client, char* mimeType){
 }
 
 void send_file(char *path,int socketfd_client, char *mimeType){
-    char header[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " ;
+    char header[] = "HTTP/1.1 200 OK\r\nContent-Type: " ;
     char header_buffer[4096];
     long int bytes = get_file_bytes(path);
-    snprintf(header_buffer, 4096, "%s%ld\r\n\r\n",header,bytes);
+    snprintf(header_buffer, 4096, "%s%s; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %ld\r\n\r\n",header,mimeType,bytes);
     send(socketfd_client, header_buffer, strlen(header_buffer), 0);
     //--------- file sending part ----------
     int contador = 0;
+    long int contador_supremo = 0;
     FILE *arq = fopen(path, "rb");
     char ch = 'a', file_buffer[8192];
 
-    while (ch!=EOF) {
+    while (contador_supremo!=bytes) {
         if (contador > 8190){
-            ch = getc(arq);
             file_buffer[contador] = ch;
-            send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
+            send(socketfd_client, file_buffer, contador, 0);
             contador = 0;    
-            memset(file_buffer, 0, 8192);
         }
         else {
             ch = getc(arq);
             file_buffer[contador] = ch;
             contador++;
+            contador_supremo++;
         }
     }
     if (contador>0){
-        send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
+        send(socketfd_client, file_buffer, contador, 0);
     }
-    rewind(arq);
     fclose(arq);
 }
 
@@ -212,7 +208,7 @@ void *routine(void* arg){
             pthread_cond_wait(&tsk_thcond, &tsk_mutex);
         }
         Task *temp = inicio;
-        printf("%s %s | %d %d\n",temp->tsk_task_connection, temp->tsk_what_frontend_wants,temp->tsk_socketfd_servidor,temp->tsk_socketfd_cliente);
+        printf("[Request type: %s][Requested: %s][SocketFD: %d]\n",temp->tsk_task_connection, temp->tsk_what_frontend_wants,temp->tsk_socketfd_cliente);
         taskquant--;
 
         if (inicio->tsk_next == NULL){
@@ -228,17 +224,21 @@ void *routine(void* arg){
         if (strcmp(temp->tsk_task_connection, "GET") == 0){
             if (strcmp(temp->tsk_what_frontend_wants,"/") == 0){
                 send_text("www/index.html", temp->tsk_socketfd_cliente,mimeTypes[0]);
-                send_file("nerd.ico", temp->tsk_socketfd_cliente,mimeTypes[3]);
                 close(temp->tsk_socketfd_cliente);
             }
             
+            else if (strcmp(temp->tsk_what_frontend_wants,"/script.js") == 0){
+                send_text("www/script.js", temp->tsk_socketfd_cliente,mimeTypes[1]);
+                close(temp->tsk_socketfd_cliente);
+            }
+
             else if (strcmp(temp->tsk_what_frontend_wants,"/style.css") == 0){
                 send_text("www/style.css",temp->tsk_socketfd_cliente,mimeTypes[2]);
                 close(temp->tsk_socketfd_cliente);
             }
 
-            else if (strcmp(temp->tsk_what_frontend_wants,"/script.js") == 0){
-                send_text("www/script.js", temp->tsk_socketfd_cliente,mimeTypes[2]);
+            else if (strcmp(temp->tsk_what_frontend_wants,"/favicon.ico") == 0){
+                send_file("www/favicon.ico",temp->tsk_socketfd_cliente,mimeTypes[3]);
                 close(temp->tsk_socketfd_cliente);
             }
         }
@@ -256,6 +256,21 @@ void *routine(void* arg){
 }
 
 /*
+
+
+
+
+GET /favicon.ico HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0
+Accept: image/avif,image/webp,image/png,image/svg+xml,image/;q=0.8,;q=0.5
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br, zstd
+Connection: keep-alive
+Referer: http://127.0.0.1:8080/
+Sec-Fetch-Dest: image
+Sec-Fetch-Mode: no-cors
+Sec-Fetch-Site: same-origin
 
 1 - html
 
@@ -296,7 +311,7 @@ int main(){
         
         addTask(tipo_conexao, nome_arquivo, socket_clientfd,socketfd);
         taskquant++;
-        
+        printf("-----------------------------\n%s\n-------------------------------\n\n",buffer);
         pthread_cond_signal(&tsk_thcond);
     }
     getc(stdin);
