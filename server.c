@@ -230,7 +230,6 @@ void send_file(char *path,int socketfd_client, char *mimeType){
 
 void recive_file(Task *temp){
     int testes =0;
-    //printf("Teste %d\n",testes);testes++;
     char *temp1 = strdup(temp->tsk_headers_only);
     char *temp2 = strdup(temp->tsk_headers_only);
     char *temp4 = strdup(temp->tsk_full_request);
@@ -239,41 +238,25 @@ void recive_file(Task *temp){
 
     char *file_ptr = strstr(temp->tsk_full_request, "<<<FILE_DATA_START>>>");
 
-    //printf("Teste %d\n",testes);testes++;
     char *buffer1 = strstr(temp2, "X-File-Size: ");
     char *buffer2 = strstr(temp2, "X-File-Name: ");
-    
-    //printf("Teste %d\n",testes);testes++;
 
     char tempr1[8192],tempr2[8192];
     strcpy(tempr1, buffer1);
     strcpy(tempr2, buffer2);
 
-    //printf("Teste %d\n",testes);testes++;
-
     char *content_lenght = strtok(tempr1, "\n");
     char *uploaded_file_name = strtok(tempr2, "\n");
-
-    //printf("Teste %d\n",testes);testes++;
 
     uploaded_file_name+=13;
     uploaded_file_name[strlen(uploaded_file_name)-1] = '\0';
 
-    //printf("Teste %d\n",testes);testes++;
-
     int header_lenght =  get_text_bytes(temp->tsk_headers_only) ;
-    //printf("Teste %d\n",testes);testes++;
     long int file_buffer_lenght = temp->request_size_bytes - header_lenght - 39;
-    //printf("Teste %d\n",testes);testes++;
     int true_size_file = convert_int(content_lenght);
-    //printf("Teste %d\n",testes);testes++;
     char file_location[4096];
-    //printf("Teste %d\n",testes);testes++;
     strcpy(file_location, uploaded_file_name);
-    //printf("Teste %d\n",testes);testes++;
     char *tempptr = strstr(file_location,".");
-
-    
 
     tempptr[0] = '\0';
     mkdir(uploaded_file_name,0755);
@@ -282,7 +265,6 @@ void recive_file(Task *temp){
     FILE *arq = fopen(file_location, "wb");
     int arquivofd = fileno(arq);
     flock(arquivofd, LOCK_EX);
-    //printf("%s\n",temp->tsk_headers_only);
     file_ptr+=22;
     fwrite(file_ptr, 1, file_buffer_lenght, arq);
     if ((temp->request_size_bytes - header_lenght - 39)  < true_size_file) {
