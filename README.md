@@ -15,16 +15,13 @@
 ---
 
 ## English  
+
+### Overview  
 The **C-Storage-Server** is a minimalist HTTP server written in **C**, designed to handle multiple simultaneous connections with threads and efficiently manage file uploads.  
 
 It was built with a strong focus on **performance, stability, and code clarity**, successfully tested with file uploads of up to **1GB** without data loss or corruption.  
 The server also supports serving static files (HTML, CSS, JS, favicon), making it a lightweight and reliable solution for file storage.  
 
-### Overview  
-C-Storage-Server is a lightweight **HTTP file storage server** capable of receiving uploads and serving static content.  
-It was tested with files up to **1GB** without corruption, ensuring stability even under high load.  
-
-This project was created to explore **network programming in C**, focusing on low-level socket operations, multithreading with pthreads, and secure file handling.  
 
 ### Features  
 - Multithreaded HTTP server using **POSIX threads**  
