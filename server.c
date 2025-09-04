@@ -9,8 +9,6 @@
 #include <unistd.h>
 #include <sys/stat.h> 
 #include <ifaddrs.h>
-#include <ctype.h>
-#include <time.h>
 
 pthread_mutex_t tsk_mutex;
 pthread_cond_t tsk_thcond;
@@ -280,7 +278,7 @@ void recive_file(Task *temp){
     }
     fclose(arq);
     flock(arquivofd, LOCK_UN);
-    send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 16, 0);
+    send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 15, 0);
     close(temp->tsk_socketfd_cliente);
     free(temp1);
     free(temp2);
