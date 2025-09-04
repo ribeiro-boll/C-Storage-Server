@@ -3,7 +3,7 @@
 
 # 📁 C-Storage-Server  
 
-![demo](www/2025-09-04 13-17-00.gif)
+![demo](www/demo.gif)
 
 
 ---
