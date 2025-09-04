@@ -281,8 +281,6 @@ void recive_file(Task *temp){
     fclose(arq);
     flock(arquivofd, LOCK_UN);
     send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 16, 0);
-    //printf("-------------------------pinto gay inicio-------------------------\n%s\n-------------------------pinto gay final----------
-    // ---------------\n%ld\n%ld\n",temp->tsk_headers_only,get_text_bytes(temp->tsk_headers_only),get_text_bytes(full_content_lenght));
     close(temp->tsk_socketfd_cliente);
     free(temp1);
     free(temp2);
