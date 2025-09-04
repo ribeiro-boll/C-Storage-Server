@@ -4,6 +4,7 @@
 # 📁 C-Storage-Server  
 
 ![demo](www/demo.gif)
+<img src="www/animacao.gif" width="300"/>
 
 
 ---
