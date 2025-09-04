@@ -364,6 +364,7 @@ void *routine(void* arg){
             close(temp->tsk_socketfd_cliente);
         }
         //--------------------------------------
+        free(temp->tsk_headers_only);
         free(temp->tsk_task_connection);
         free(temp->tsk_what_frontend_wants);
         free(temp->tsk_full_request);
@@ -419,7 +420,7 @@ int main(){
 
     int socketfd,socket_clientfd;
 
-    setIp("9988");
+    setIp("9998");
 
     struct sockaddr_storage client_conf;
     memset(&client_conf, 0, sizeof(client_conf));
