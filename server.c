@@ -274,11 +274,12 @@ void recive_file(Task *temp){
             temp->request_size_bytes += recv_size;
             fwrite(buffer_socket, 1, recv_size, arq);
         }
+        send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 14, 0);
         printf("Upload finished! :D\n");
     }
     fclose(arq);
     flock(arquivofd, LOCK_UN);
-    send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 15, 0);
+    
     close(temp->tsk_socketfd_cliente);
     free(temp1);
     free(temp2);
