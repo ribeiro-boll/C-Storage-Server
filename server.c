@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <sys/stat.h> 
 #include <ifaddrs.h>
+#include <sqlite3.h>
+
 
 pthread_mutex_t tsk_mutex;
 pthread_cond_t tsk_thcond;
@@ -41,6 +43,21 @@ long long int convert_int(char* nmr){
 
 char *mimeTypes[] = {"text/html","text/javascript","text/css","image/x-icon"};
 
+char db_nome[] = "storage.db";
+sqlite3 *db;
+//--------------------- DATABASE -----------------
+void write_on_db(char *filename,char *file_path,char *mimetype,long long int file_size){
+    sqlite3_stmt *comand;
+    sqlite3_prepare_v2(db, "INSERT INTO files (filename, file_path, mimeType, size) VALUES ( ?, ?, ?, ?)", -1, &comand, NULL);
+    sqlite3_bind_text(comand, 1, filename, -1, SQLITE_STATIC);
+    sqlite3_bind_text(comand, 2, file_path, -1, SQLITE_STATIC);
+    sqlite3_bind_text(comand, 3, mimetype, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(comand, 4, file_size);
+    sqlite3_step(comand);
+    sqlite3_finalize(comand);
+}
+// ------------------------------------------------
+
 //-------------estrutura das linked lists----------
 
 typedef struct Net{
@@ -53,7 +70,7 @@ typedef struct Task{
     int tsk_socketfd_cliente;
     int tsk_socketfd_servidor;
 
-    long int request_size_bytes;
+    long long int request_size_bytes;
     char *tsk_full_request; // buffer with all request contents
     char *tsk_headers_only;
     char *tsk_task_connection;
@@ -66,7 +83,7 @@ typedef struct Task{
 Task *inicio = NULL;
 Task *final  = NULL;
 
-void addTask(long int req_size,char *full_request,char *header,char *typeConnection,char *what_frontend_wants,int socketfd_cliente,int socketfd_servidor){
+void addTask(long long int req_size,char *full_request,char *header,char *typeConnection,char *what_frontend_wants,int socketfd_cliente,int socketfd_servidor){
     int testes =0;
     
     Task *newtask = malloc(sizeof(Task));
@@ -230,7 +247,7 @@ void recive_file(Task *temp){
     int testes =0;
     char *temp1 = strdup(temp->tsk_headers_only);
     char *temp2 = strdup(temp->tsk_headers_only);
-    char *temp4 = strdup(temp->tsk_full_request);
+
 
    // printf("Teste %d\n",testes);testes++;
 
@@ -238,19 +255,23 @@ void recive_file(Task *temp){
 
     char *buffer1 = strstr(temp2, "X-File-Size: ");
     char *buffer2 = strstr(temp2, "X-File-Name: ");
+    char *buffer3 = strstr(temp2, "FILETYPE: ");
 
-    char tempr1[8192],tempr2[8192];
+    char tempr1[8192],tempr2[8192], tempr3[1024];
     strcpy(tempr1, buffer1);
     strcpy(tempr2, buffer2);
+    strcpy(tempr3, buffer3);
 
     char *content_lenght = strtok(tempr1, "\n");
     char *uploaded_file_name = strtok(tempr2, "\n");
+    char *mimeType_db = (strtok(tempr3, "\n"))+10;
+
 
     uploaded_file_name+=13;
     uploaded_file_name[strlen(uploaded_file_name)-1] = '\0';
 
     int header_lenght =  get_text_bytes(temp->tsk_headers_only) ;
-    long int file_buffer_lenght = temp->request_size_bytes - header_lenght - 39;
+    long long int file_buffer_lenght = temp->request_size_bytes - header_lenght - 39;
     int true_size_file = convert_int(content_lenght);
     char file_location1[4096],file_location2[8192],file_name_noExt[4096];
     strcpy(file_name_noExt, uploaded_file_name);
@@ -282,13 +303,13 @@ void recive_file(Task *temp){
     }
     else
         send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 14, 0);
+    
+    write_on_db(file_location1,file_location2,mimeType_db,file_buffer_lenght);    
     fclose(arq);
     flock(arquivofd, LOCK_UN);
-    
     close(temp->tsk_socketfd_cliente);
     free(temp1);
     free(temp2);
-    free(temp4);
 }
 
 // -------------------------------------------------------
@@ -357,18 +378,7 @@ void *routine(void* arg){
     }
 }
 
-//-----------------------------------------------
-
-/*
-
-
-
-
-1 - html
-
-2 - upload
-
-*/
+//----------------------------------------------
 
 void setIp(char *port){
     struct ifaddrs *ifaddr, *ifa;
@@ -396,6 +406,31 @@ void setIp(char *port){
         }
     }
 }
+int arquivo_existe(char *nome) {
+    struct stat buffer;
+    return (stat(nome, &buffer) == 0);
+}
+
+void create_db(){
+    char *sql = "CREATE TABLE IF NOT EXISTS files ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "filename TEXT NOT NULL,"
+            "file_path TEXT NOT NULL,"
+            "mimeType TEXT NOT NULL,"
+            "size INTEGER,"
+            "upload_date DATETIME DEFAULT CURRENT_TIMESTAMP);";
+          
+    if (arquivo_existe(db_nome) == 0){
+        sqlite3_open(db_nome,&db);
+        sqlite3_exec(db, sql, 0, 0, 0);
+    }
+    else {
+        char comands[] = "DROP TABLE files";
+        sqlite3_open(db_nome,&db);
+        sqlite3_exec(db, comands, 0,0,0);
+        sqlite3_exec(db, sql, 0, 0, 0);
+    }
+}
 
 int main(){
     pthread_mutex_init(&tsk_mutex, NULL);
@@ -404,7 +439,7 @@ int main(){
 
     int socketfd,socket_clientfd;
 
-    setIp("9989");
+    setIp("9999");
 
     struct sockaddr_storage client_conf;
     memset(&client_conf, 0, sizeof(client_conf));
@@ -412,15 +447,19 @@ int main(){
     int status = create_socket(&socketfd);
     char buffer[8192],clone_buffer[8192], *headers,*tipo_conexao,*nome_arquivo;
     printf("http://%s:%s\n\n",netinfo.addr,netinfo.port);
+    int cond_create_db;
 
-    
     for (int i = 0; i<8; i++) {
         pthread_create(&tid[i], NULL, routine, NULL);
     }
-    mkdir("uploads", 0777);
+
+    if ((cond_create_db = mkdir("uploads", 0777)) == 0)
+        create_db();
+    else 
+        sqlite3_open(db_nome, &db);
     while (1) {
         socket_clientfd = accept(socketfd, (struct sockaddr *)&client_conf, &size);
-        int req_size = recv(socket_clientfd,buffer, 8192, 0);
+        long long int req_size = recv(socket_clientfd,buffer, 8192, 0);
         strcpy(clone_buffer, buffer);
         
         headers = strdup("temporario...");
@@ -430,8 +469,6 @@ int main(){
         if (strcmp(nome_arquivo, "/upload") == 0){
             headers = strstr(clone_buffer, "<<<HEADER_END>>>");
             headers[0] = '\0';
-            //printf("%s",buffer);
-
         }
         pthread_mutex_lock(&tsk_mutex);
         addTask(req_size,buffer,clone_buffer,tipo_conexao, nome_arquivo, socket_clientfd,socketfd);
@@ -440,17 +477,3 @@ int main(){
         pthread_cond_signal(&tsk_thcond);
     }
 }
-
-// GET / HTTP/1.1
-// Host: 127.0.0.1:8000
-// User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0
-// Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
-// Accept-Language: en-US,en;q=0.5
-// Accept-Encoding: gzip, deflate, br, zstd
-// Connection: keep-alive
-// Upgrade-Insecure-Requests: 1
-// Sec-Fetch-Dest: document
-// Sec-Fetch-Mode: navigate
-// Sec-Fetch-Site: none
-// Sec-Fetch-User: ?1
-// Priority: u=0, i
