@@ -272,6 +272,7 @@ void recive_file(Task *temp){
 
     int header_lenght =  get_text_bytes(temp->tsk_headers_only) ;
     long long int file_buffer_lenght = temp->request_size_bytes - header_lenght - 39;
+    long long int total_size = file_buffer_lenght;
     int true_size_file = convert_int(content_lenght);
     char file_location1[4096],file_location2[8192],file_name_noExt[4096];
     strcpy(file_name_noExt, uploaded_file_name);
@@ -295,6 +296,7 @@ void recive_file(Task *temp){
             char buffer_socket[8192];
             int recv_size = recv(temp->tsk_socketfd_cliente, buffer_socket, 8192, 0);
             if (recv_size == 0) break;
+            total_size+=recv_size;
             temp->request_size_bytes += recv_size;
             fwrite(buffer_socket, 1, recv_size, arq);
         }
@@ -304,7 +306,7 @@ void recive_file(Task *temp){
     else
         send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 14, 0);
     
-    write_on_db(file_location1,file_location2,mimeType_db,file_buffer_lenght);    
+    write_on_db(file_name_noExt,file_location2,mimeType_db,total_size);    
     fclose(arq);
     flock(arquivofd, LOCK_UN);
     close(temp->tsk_socketfd_cliente);
@@ -439,7 +441,7 @@ int main(){
 
     int socketfd,socket_clientfd;
 
-    setIp("9999");
+    setIp("8688");
 
     struct sockaddr_storage client_conf;
     memset(&client_conf, 0, sizeof(client_conf));

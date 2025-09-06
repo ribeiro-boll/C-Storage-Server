@@ -3,9 +3,7 @@
 
 # 📁 C-Storage-Server  
 
-![demo](www/demo.gif)
-<img src="www/animacao.gif" width="300"/>
-
+![demo](www/demo.gif)  
 
 ---
 
@@ -17,34 +15,66 @@
 ## English  
 
 ### Overview  
-The **C-Storage-Server** is a minimalist HTTP server written in **C**, designed to handle multiple simultaneous connections with threads and efficiently manage file uploads.  
+The **C-Storage-Server** is a minimalist HTTP server written in **C**, designed to handle multiple simultaneous connections with a **thread pool** and efficiently manage file uploads.  
 
-It was built with a strong focus on **performance, stability, and code clarity**, successfully tested with file uploads of up to **1GB** without data loss or corruption.  
+It was built with a strong focus on **performance, stability, and code clarity**, successfully tested with file uploads of over **1GB** without data loss or corruption.  
 The server also supports serving static files (HTML, CSS, JS, favicon), making it a lightweight and reliable solution for file storage.  
 
-
 ### Features  
-- Multithreaded HTTP server using **POSIX threads**  
-- Support for **binary file uploads** (no truncation/corruption)  
+- HTTP server implemented from scratch using **TCP/IP sockets**  
+- **Binary file uploads** with support for large files (no truncation/corruption)  
+- **Thread pool architecture** with task queue and workers  
+- **SQLite database** integration for file metadata management  
+- **REST API** for storage operations (upload, listing, etc.)  
 - Serving of **static frontend files** (HTML, CSS, JS, favicon)  
 - Automatic **IP and port detection** with `ifaddrs`  
-- Robustness tested with large file transfers (1GB)  
+- Stress-tested with file uploads of up to **1GB**  
+
+### Technologies  
+- **C (ANSI C)**  
+- **POSIX Threads (pthread)**  
+- **SQLite3**  
+- **TCP/IP sockets**  
+
+### Security  
+- Use of **prepared statements** with SQLite to prevent SQL Injection  
+- Manual parsing of **HTTP multipart/form-data** (no external frameworks)  
+- Concurrency control with **mutex + condition variables**  
+
+### Next Steps  
+- Implement a **web interface** for downloads  
 
 ---
 
 ## pt-BR  
 
 ### Visão Geral  
-O **C-Storage-Server** é um servidor HTTP minimalista escrito em **C**, projetado para lidar com múltiplas conexões simultâneas usando threads e gerenciar uploads de arquivos de forma eficiente.  
+O **C-Storage-Server** é um servidor HTTP minimalista escrito em **C**, projetado para lidar com múltiplas conexões simultâneas com um **thread pool** e gerenciar uploads de arquivos de forma eficiente.  
 
-O projeto foi desenvolvido com foco em **performance, estabilidade e clareza de código**, suportando uploads de até **1GB** sem perda ou corrupção de dados.  
+O projeto foi desenvolvido com foco em **performance, estabilidade e clareza de código**, suportando uploads de mais de **1GB** sem perda ou corrupção de dados.  
 Além disso, também pode servir arquivos estáticos (HTML, CSS, JS, favicon), tornando-se uma solução completa e leve para armazenamento de arquivos.  
 
-
 ### Funcionalidades  
-- Servidor HTTP multithreaded com **POSIX threads**  
-- Suporte a upload de arquivos binários (sem truncar/corromper dados)  
-- Servidor de arquivos estáticos (HTML, CSS, JS, favicon)  
+- Servidor HTTP implementado do zero usando **sockets TCP/IP**  
+- **Uploads de arquivos binários grandes** (sem truncar/corromper dados)  
+- **Arquitetura com thread pool** e fila de tarefas com workers  
+- Integração com **SQLite** para gerenciamento de metadados dos arquivos  
+- **API REST** para operações de armazenamento (upload, listagem, etc.)  
+- Servidor de arquivos estáticos (**HTML, CSS, JS, favicon**)  
 - Detecção automática de **IP e porta** com `ifaddrs`  
-- Testado com upload de arquivos grandes (até 1GB)  
- 
+- Testado com uploads de até **1GB** com estabilidade  
+
+### Tecnologias  
+- **C (ANSI C)**  
+- **POSIX Threads (pthread)**  
+- **SQLite3**  
+- **Sockets TCP/IP**  
+
+### Segurança  
+- Uso de **prepared statements** no SQLite (evita SQL Injection)  
+- Parsing manual de **HTTP multipart/form-data** (sem frameworks externos)  
+- Controle de concorrência via **mutex + condition variables**  
+
+### Próximos Passos  
+- Criar uma **interface web** para download  
+  
