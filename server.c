@@ -252,15 +252,18 @@ void recive_file(Task *temp){
     int header_lenght =  get_text_bytes(temp->tsk_headers_only) ;
     long int file_buffer_lenght = temp->request_size_bytes - header_lenght - 39;
     int true_size_file = convert_int(content_lenght);
-    char file_location[4096];
-    strcpy(file_location, uploaded_file_name);
-    char *tempptr = strstr(file_location,".");
+    char file_location1[4096],file_location2[8192],file_name_noExt[4096];
+    strcpy(file_name_noExt, uploaded_file_name);
+    char *tempptr = strstr(file_name_noExt,".");
 
     tempptr[0] = '\0';
-    mkdir(uploaded_file_name,0755);
-    snprintf(file_location, 4096, "%s/%s", uploaded_file_name,uploaded_file_name);
 
-    FILE *arq = fopen(file_location, "wb");
+    snprintf(file_location1, 4096, "uploads/%s", file_name_noExt);
+    snprintf(file_location2, 8192, "%s/%s", file_location1, uploaded_file_name);
+
+    mkdir(file_location1,0777);
+    
+    FILE *arq = fopen(file_location2, "wb");
     int arquivofd = fileno(arq);
     flock(arquivofd, LOCK_EX);
     file_ptr+=22;
@@ -277,6 +280,8 @@ void recive_file(Task *temp){
         send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 14, 0);
         printf("Upload finished! :D\n");
     }
+    else
+        send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 14, 0);
     fclose(arq);
     flock(arquivofd, LOCK_UN);
     
@@ -399,7 +404,7 @@ int main(){
 
     int socketfd,socket_clientfd;
 
-    setIp("9998");
+    setIp("9989");
 
     struct sockaddr_storage client_conf;
     memset(&client_conf, 0, sizeof(client_conf));
@@ -412,7 +417,7 @@ int main(){
     for (int i = 0; i<8; i++) {
         pthread_create(&tid[i], NULL, routine, NULL);
     }
-
+    mkdir("uploads", 0777);
     while (1) {
         socket_clientfd = accept(socketfd, (struct sockaddr *)&client_conf, &size);
         int req_size = recv(socket_clientfd,buffer, 8192, 0);
