@@ -74,7 +74,7 @@ fileInput.addEventListener('change', (e) => {
 });
 
 function handleFileSelection(file) {
-    const MAX_FILE_SIZE = (1024 * 1024 * 1024); // 1GB em bytes
+    const MAX_FILE_SIZE = (1024 * 1024 * 1024 * 19)/10 // 1.89 GB em bytes
     
     if (file.size > MAX_FILE_SIZE) {
         showStatus(`Arquivo muito grande! Limite máximo: ${formatFileSize(MAX_FILE_SIZE)}. Seu arquivo: ${formatFileSize(file.size)}`, 'error');
