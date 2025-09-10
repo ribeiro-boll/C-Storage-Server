@@ -17,7 +17,7 @@
 ### Overview  
 The **C-Storage-Server** is a minimalist HTTP server written in **C**, designed to handle multiple simultaneous connections with a **thread pool** and efficiently manage file uploads.  
 
-It was built with a strong focus on **performance, stability, and code clarity**, successfully tested with file uploads of over **1GB** without data loss or corruption.  
+It was built with a strong focus on **performance, stability, and code clarity**, successfully tested with files up to **1GB** (the upload size limit is hard coded to be **1GB**) without data loss or corruption.  
 The server also supports serving static files (HTML, CSS, JS, favicon), making it a lightweight and reliable solution for file storage.  
 
 ### Features  
@@ -51,7 +51,7 @@ The server also supports serving static files (HTML, CSS, JS, favicon), making i
 ### Visão Geral  
 O **C-Storage-Server** é um servidor HTTP minimalista escrito em **C**, projetado para lidar com múltiplas conexões simultâneas com um **thread pool** e gerenciar uploads de arquivos de forma eficiente.  
 
-O projeto foi desenvolvido com foco em **performance, estabilidade e clareza de código**, suportando uploads de mais de **1GB** sem perda ou corrupção de dados.  
+O projeto foi desenvolvido com foco em **performance, estabilidade e clareza de código**, suportando uploads de mais de **1GB** (o limite do tamanho dos uploads foi hardcoded pra ser ate **1GB**) sem perda ou corrupção de dados.  
 Além disso, também pode servir arquivos estáticos (HTML, CSS, JS, favicon), tornando-se uma solução completa e leve para armazenamento de arquivos.  
 
 ### Funcionalidades  
