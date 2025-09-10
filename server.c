@@ -48,7 +48,7 @@ sqlite3 *db;
 //--------------------- DATABASE -----------------
 void write_on_db(char *filename,char *file_path,char *mimetype,long long int file_size){
     sqlite3_stmt *comand;
-    sqlite3_prepare_v2(db, "INSERT INTO files (filename, file_path, mimeType, size) VALUES ( ?, ?, ?, ?)", -1, &comand, NULL);
+    sqlite3_prepare_v2(db, "INSERT INTO files (filename, file_path, mimeType, size_bytes) VALUES ( ?, ?, ?, ?)", -1, &comand, NULL);
     sqlite3_bind_text(comand, 1, filename, -1, SQLITE_STATIC);
     sqlite3_bind_text(comand, 2, file_path, -1, SQLITE_STATIC);
     sqlite3_bind_text(comand, 3, mimetype, -1, SQLITE_STATIC);
@@ -123,6 +123,8 @@ int create_socket(int *socketfd){
 
     if((status1 = getaddrinfo(netinfo.addr,netinfo.port,&sockinfo,&sockinfo_list)) != 0){
         printf("err getaddr\n");
+        sleep(2);
+        exit(1);
         return status1;
     }
     
@@ -131,12 +133,16 @@ int create_socket(int *socketfd){
     if ((status2 = bind(*socketfd, sockinfo_list->ai_addr, sockinfo_list->ai_addrlen)) != 0){
         printf("err bind\n");
         close(*socketfd);
+        sleep(2);
+        exit(2);
         return status2;
     }
 
     if ((status3 = listen(*socketfd, 100)) != 0){
         printf("err listen\n");
         close(*socketfd);
+        sleep(2);
+        exit(3);
         return status3;
     }
     return 0;
@@ -262,7 +268,7 @@ void recive_file(Task *temp){
     strcpy(tempr2, buffer2);
     strcpy(tempr3, buffer3);
 
-    char *content_lenght = strtok(tempr1, "\n");
+    char *file_size_str = strtok(tempr1, "\n");
     char *uploaded_file_name = strtok(tempr2, "\n");
     char *mimeType_db = (strtok(tempr3, "\n"))+10;
 
@@ -273,7 +279,7 @@ void recive_file(Task *temp){
 
     long long int file_buffer_lenght = temp->request_size_bytes - header_lenght - 39;
     long long int total_size = file_buffer_lenght;
-    int true_size_file = convert_int(content_lenght);
+    long long int true_request_file_size = convert_int(file_size_str);
     char file_location1[4096],file_location2[8192],file_name_noExt[4096];
     strcpy(file_name_noExt, uploaded_file_name);
     char *tempptr = strstr(file_name_noExt,".");
@@ -289,27 +295,44 @@ void recive_file(Task *temp){
     int arquivofd = fileno(arq);
     flock(arquivofd, LOCK_EX);
     file_ptr+=22;
+    printf("Upload Recived...\n");
     fwrite(file_ptr, 1, file_buffer_lenght, arq);
-    if ((temp->request_size_bytes - header_lenght - 39)  < true_size_file) {
-        printf("Starting Big Upload...\n");
-        while ((temp->request_size_bytes - header_lenght)  < true_size_file) {
+    if (total_size < true_request_file_size) {
+        printf("Starting Big Upload...\nFile Name: %s\n\n",file_name_noExt);
+        while (total_size  < true_request_file_size) {
             char buffer_socket[1024 * 1024];
-            int recv_size = recv(temp->tsk_socketfd_cliente, buffer_socket,  1024 * 1024 , 0);
-            if (recv_size == 0) break;
+            long long int recv_size = recv(temp->tsk_socketfd_cliente, buffer_socket,  1024 * 1024 , 0);
+            if (recv_size <= 0) break;
             total_size+=recv_size;
-            temp->request_size_bytes += recv_size;
             fwrite(buffer_socket, 1, recv_size, arq);
         }
-        send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 14, 0);
-        printf("Upload finished! :D\n\n");
+        float file_size_converted;
+        if (1024 * 1024 * 1024 < total_size){
+            fclose(arq);
+            flock(arquivofd, LOCK_UN);
+            file_size_converted = total_size/(1024.0 * 1024.0 * 1024.0);
+            send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 15, 0);
+            close(temp->tsk_socketfd_cliente);
+            printf("Upload finished! :D\nFile Name: \"%s\"\nFile Location: \"%s\"\nFile size: %.2f GBs\n\n",file_name_noExt,file_location2,file_size_converted);
+        }
+        else {
+            fclose(arq);
+            flock(arquivofd, LOCK_UN);
+            file_size_converted = total_size/(1024.0 * 1024.0);
+            send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 15, 0);
+            close(temp->tsk_socketfd_cliente);
+            printf("Upload finished! :D\nFile Name: \"%s\"\nFile Location: \"%s\"\nFile size: %.2f MBs\n\n",file_name_noExt,file_location2,file_size_converted); 
+        }
     }
-    else
-        send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 14, 0);
-    
+    else{
+        float file_size_converted = total_size/(1024.0);
+        fclose(arq);
+        flock(arquivofd, LOCK_UN);
+        printf("Upload finished! :D\nFile Name: \"%s\"\nFile Location: \"%s\"\nFile size: %.4f KBs\n\n",file_name_noExt,file_location2,file_size_converted); 
+        send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 15, 0);
+        close(temp->tsk_socketfd_cliente);
+    }
     write_on_db(file_name_noExt,file_location2,mimeType_db,total_size);    
-    fclose(arq);
-    flock(arquivofd, LOCK_UN);
-    close(temp->tsk_socketfd_cliente);
     free(temp1);
     free(temp2);
 }
@@ -419,7 +442,7 @@ void create_db(){
             "filename TEXT NOT NULL,"
             "file_path TEXT NOT NULL,"
             "mimeType TEXT NOT NULL,"
-            "size INTEGER,"
+            "size_bytes INTEGER,"
             "upload_date DATETIME DEFAULT CURRENT_TIMESTAMP);";
           
     if (arquivo_existe(db_nome) == 0){
@@ -441,7 +464,7 @@ int main(){
 
     int socketfd,socket_clientfd;
 
-    setIp("8688");
+    setIp("8885");
 
     struct sockaddr_storage client_conf;
     memset(&client_conf, 0, sizeof(client_conf));
