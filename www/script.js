@@ -12,6 +12,7 @@ async function detectClientIp() {
         document.getElementById('clientIp').textContent = clientIp;
     }
 }
+
 function autoDetectServer() {
     const serverUrlField = document.getElementById('serverUrl');
     
@@ -73,6 +74,13 @@ fileInput.addEventListener('change', (e) => {
 });
 
 function handleFileSelection(file) {
+    const MAX_FILE_SIZE = (1024 * 1024 * 1024); // 1GB em bytes
+    
+    if (file.size > MAX_FILE_SIZE) {
+        showStatus(`Arquivo muito grande! Limite máximo: ${formatFileSize(MAX_FILE_SIZE)}. Seu arquivo: ${formatFileSize(file.size)}`, 'error');
+        return;
+    }
+    
     selectedFile = file;
     const fileId = generateUniqueId();
     const uploadTime = new Date().toLocaleString('pt-BR');
@@ -146,6 +154,7 @@ async function uploadFile() {
         resetUploadState();
     }
 }
+
 async function createCustomHttpRequest(file) {
     const fileId = document.getElementById('fileId').textContent;
     const uploadTime = document.getElementById('uploadTime').textContent;
@@ -172,17 +181,20 @@ async function createCustomHttpRequest(file) {
     
     return combinedBuffer;
 }
+
 function resetUploadState() {
     document.getElementById('progressBar').style.display = 'none';
     document.getElementById('progressFill').style.width = '0%';
     document.getElementById('uploadBtn').disabled = false;
     document.getElementById('uploadBtn').textContent = '🚀 Fazer Upload';
 }
+
 function resetForm() {
     selectedFile = null;
     document.getElementById('fileInput').value = '';
     document.getElementById('fileInfo').classList.remove('show');
 }
+
 function showStatus(message, type) {
     const status = document.getElementById('status');
     status.textContent = message;
@@ -192,10 +204,12 @@ function showStatus(message, type) {
         status.style.display = 'none';
     }, 5000);
 }
+
 document.addEventListener('DOMContentLoaded', () => {
     detectClientIp();
     autoDetectServer();
 });
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         detectClientIp();
