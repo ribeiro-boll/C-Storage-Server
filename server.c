@@ -192,14 +192,13 @@ void send_text(char *path,int socketfd_client, char* mimeType){
 
     int request_full_size = 0;
     FILE *arq = fopen(path, "r");
-    char ch = 'a', file_buffer[8192];
+    char ch = 'a', file_buffer[20*1024];
     while (ch!=EOF) {
-        if (request_full_size > 8190){
+        if (request_full_size > 20*1023){
             ch = getc(arq);
             file_buffer[request_full_size] = ch;
             send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
-            request_full_size = 0;    
-            memset(file_buffer, 0, 8192);
+            request_full_size = 0;   
         }
         else {
             ch = getc(arq);
@@ -208,7 +207,7 @@ void send_text(char *path,int socketfd_client, char* mimeType){
         }
     }
     if (request_full_size>0){
-        send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
+        send(socketfd_client, file_buffer, strlen(file_buffer), 0);
     }
     close(socketfd_client);
     rewind(arq);
@@ -225,10 +224,10 @@ void send_file(char *path,int socketfd_client, char *mimeType){
     int request_full_size = 0;
     long int request_full_size_supremo = 0;
     FILE *arq = fopen(path, "rb");
-    char ch = 'a', file_buffer[8192];
+    char ch = 'a', file_buffer[20*1024];
 
     while (request_full_size_supremo!=bytes) {
-        if (request_full_size > 8190){
+        if (request_full_size > 20*1023){
             file_buffer[request_full_size] = ch;
             send(socketfd_client, file_buffer, request_full_size, 0);
             request_full_size = 0;    
@@ -302,8 +301,8 @@ void recive_file(Task *temp){
     if (total_size < true_request_file_size) {
         printf("Starting Big Upload...\nFile Name: %s\n\n",file_name_noExt);
         while (total_size  < true_request_file_size) {
-            char buffer_socket[1024 * 1024];
-            long long int recv_size = recv(temp->tsk_socketfd_cliente, buffer_socket,  1024 * 1024 , 0);
+            char buffer_socket[5 * 1024 * 1024];
+            long long int recv_size = recv(temp->tsk_socketfd_cliente, buffer_socket,  5 * 1024 * 1024 , 0);
             if (recv_size <= 0) break;
             total_size+=recv_size;
             fwrite(buffer_socket, 1, recv_size, arq);
@@ -469,13 +468,13 @@ int main(){
 
     int socketfd,socket_clientfd;
 
-    setIp("8885");
+    setIp("9888");
 
     struct sockaddr_storage client_conf;
     memset(&client_conf, 0, sizeof(client_conf));
     socklen_t size = sizeof(client_conf);
     int status = create_socket(&socketfd);
-    char buffer[1024 * 1024],clone_buffer[1024 * 1024], *headers,*tipo_conexao,*nome_arquivo;
+    char buffer[5 * 1024 * 1024],clone_buffer[5 * 1024 * 1024], *headers,*tipo_conexao,*nome_arquivo;
     printf("http://%s:%s\n\n",netinfo.addr,netinfo.port);
     int cond_create_db;
 
@@ -489,6 +488,7 @@ int main(){
     }
     else{
         sqlite3_open(db_nome, &db);
+        sqlite3_close(db);
     }
     while (1) {
         socket_clientfd = accept(socketfd, (struct sockaddr *)&client_conf, &size);
