@@ -10,7 +10,7 @@
 #include <sys/stat.h> 
 #include <ifaddrs.h>
 #include <sqlite3.h>
-
+#include <locale.h>
 
 pthread_mutex_t tsk_mutex;
 pthread_cond_t tsk_thcond;
@@ -47,6 +47,7 @@ char db_nome[] = "storage.db";
 sqlite3 *db;
 //--------------------- DATABASE -----------------
 void write_on_db(char *filename,char *file_path,char *mimetype,long long int file_size){
+    sqlite3_open(db_nome,&db);
     sqlite3_stmt *comand;
     sqlite3_prepare_v2(db, "INSERT INTO files (filename, file_path, mimeType, size_bytes) VALUES ( ?, ?, ?, ?)", -1, &comand, NULL);
     sqlite3_bind_text(comand, 1, filename, -1, SQLITE_STATIC);
@@ -55,6 +56,7 @@ void write_on_db(char *filename,char *file_path,char *mimetype,long long int fil
     sqlite3_bind_int64(comand, 4, file_size);
     sqlite3_step(comand);
     sqlite3_finalize(comand);
+    sqlite3_close(db);
 }
 // ------------------------------------------------
 
@@ -328,7 +330,7 @@ void recive_file(Task *temp){
         float file_size_converted = total_size/(1024.0);
         fclose(arq);
         flock(arquivofd, LOCK_UN);
-        printf("Upload finished! :D\nFile Name: \"%s\"\nFile Location: \"%s\"\nFile size: %.4f KBs\n\n",file_name_noExt,file_location2,file_size_converted); 
+        printf("Upload finished! :D\nFile Name: \"%s\"\nFile Location: \"%s\"\nFile size: %.2f KBs\n\n",file_name_noExt,file_location2,file_size_converted); 
         send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 15, 0);
         close(temp->tsk_socketfd_cliente);
     }
@@ -455,9 +457,12 @@ void create_db(){
         sqlite3_exec(db, comands, 0,0,0);
         sqlite3_exec(db, sql, 0, 0, 0);
     }
+    sqlite3_close(db);
 }
 
 int main(){
+    setlocale(LC_ALL, "");
+
     pthread_mutex_init(&tsk_mutex, NULL);
     pthread_cond_init(&tsk_thcond, NULL);
     pthread_t tid[8];
@@ -478,10 +483,13 @@ int main(){
         pthread_create(&tid[i], NULL, routine, NULL);
     }
 
-    if ((cond_create_db = mkdir("uploads", 0777)) == 0)
+    if ((cond_create_db = mkdir("uploads", 0777)) == 0){
         create_db();
-    else 
+        sqlite3_close(db);
+    }
+    else{
         sqlite3_open(db_nome, &db);
+    }
     while (1) {
         socket_clientfd = accept(socketfd, (struct sockaddr *)&client_conf, &size);
         long long int req_size = recv(socket_clientfd,buffer, 1024 * 1024, 0);
