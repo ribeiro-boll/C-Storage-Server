@@ -456,7 +456,6 @@ void create_db(){
         sqlite3_exec(db, comands, 0,0,0);
         sqlite3_exec(db, sql, 0, 0, 0);
     }
-    sqlite3_close(db);
 }
 
 int main(){
