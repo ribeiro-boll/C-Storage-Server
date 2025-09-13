@@ -301,7 +301,7 @@ void recive_file(Task *temp){
     if (total_size < true_request_file_size) {
         printf("Starting Big Upload...\nFile Name: %s\n\n",file_name_noExt);
         while (total_size  < true_request_file_size) {
-            char buffer_socket[5 * 1024 * 1024];
+            char buffer_socket[2 * 1024 * 1024];
             long long int recv_size = recv(temp->tsk_socketfd_cliente, buffer_socket,  5 * 1024 * 1024 , 0);
             if (recv_size <= 0) break;
             total_size+=recv_size;
@@ -473,7 +473,7 @@ int main(){
     memset(&client_conf, 0, sizeof(client_conf));
     socklen_t size = sizeof(client_conf);
     int status = create_socket(&socketfd);
-    char buffer[5 * 1024 * 1024],clone_buffer[5 * 1024 * 1024], *headers,*tipo_conexao,*nome_arquivo;
+    char buffer[2 * 1024 * 1024],clone_buffer[2 * 1024 * 1024], *headers,*tipo_conexao,*nome_arquivo;
     printf("http://%s:%s\n\n",netinfo.addr,netinfo.port);
     int cond_create_db;
 
@@ -491,7 +491,7 @@ int main(){
     }
     while (1) {
         socket_clientfd = accept(socketfd, (struct sockaddr *)&client_conf, &size);
-        long long int req_size = recv(socket_clientfd,buffer, 1024 * 1024, 0);
+        long long int req_size = recv(socket_clientfd,buffer, 2 * 1024 * 1024, 0);
         strcpy(clone_buffer, buffer);
         
         headers = strdup("temporario...");
