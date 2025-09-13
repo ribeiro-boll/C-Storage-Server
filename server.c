@@ -302,7 +302,7 @@ void recive_file(Task *temp){
         printf("Starting Big Upload...\nFile Name: %s\n\n",file_name_noExt);
         while (total_size  < true_request_file_size) {
             char buffer_socket[2 * 1024 * 1024];
-            long long int recv_size = recv(temp->tsk_socketfd_cliente, buffer_socket,  5 * 1024 * 1024 , 0);
+            long long int recv_size = recv(temp->tsk_socketfd_cliente, buffer_socket,  2 * 1024 * 1024 , 0);
             if (recv_size <= 0) break;
             total_size+=recv_size;
             fwrite(buffer_socket, 1, recv_size, arq);
