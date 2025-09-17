@@ -333,7 +333,7 @@ void recive_file(Task *temp){
         send(temp->tsk_socketfd_cliente, "HTTP/1.1 200 OK", 15, 0);
         close(temp->tsk_socketfd_cliente);
     }
-    write_on_db(file_name_noExt,file_location2,mimeType_db,total_size);    
+    write_on_db(uploaded_file_name,file_location2,mimeType_db,total_size);    
     free(temp1);
     free(temp2);
 }
