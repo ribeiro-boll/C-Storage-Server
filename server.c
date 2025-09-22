@@ -12,14 +12,57 @@
 #include <sqlite3.h>
 #include <locale.h>
 
+#define SIZE_BUFFER 2 * 1024 * 1024
+char *mimeTypes[] = {"text/html","text/javascript","text/css","image/x-icon"};
+
+
+char cache_html[SIZE_BUFFER],cache_js[SIZE_BUFFER],cache_css[SIZE_BUFFER],cache_icon[SIZE_BUFFER];
+long int size_html,size_js,size_css,size_icon;
+
 pthread_mutex_t tsk_mutex;
 pthread_cond_t tsk_thcond;
 
 int taskquant = 0;
 
+void setup_caches(){
+    char ch = 'a';
+    long int contador = 0;
+    FILE *arq = fopen("www/index.html", "rb");
+    while ((ch = getc(arq))!=EOF) {
+        cache_html[contador] = ch;
+        contador++;
+    }
+    size_html = contador;
+    fclose(arq);
+    
+    contador = 0;
+    arq = fopen("www/script.js", "rb");
+    while ((ch = getc(arq))!=EOF) {
+        cache_js[contador] = ch;
+        contador++;
+    }
+    size_js = contador;
+    fclose(arq);
 
+    contador = 0;
+    arq = fopen("www/style.css", "rb");
+    while ((ch = getc(arq))!=EOF) {
+        cache_css[contador] = ch;
+        contador++;
+    }
+    size_css = contador;
+    fclose(arq);
+
+    contador = 0;
+    arq = fopen("www/favicon.ico", "rb");
+    while ((ch = getc(arq))!=EOF) {
+        cache_icon[contador] = ch;
+        contador++;
+    }
+    size_icon = contador;
+    fclose(arq);
+}
 /*
-
 0 - html
 1 - js
 2 - css
@@ -41,7 +84,6 @@ long long int convert_int(char* nmr){
     return size_of_str;
 }
 
-char *mimeTypes[] = {"text/html","text/javascript","text/css","image/x-icon"};
 
 char db_nome[] = "storage.db";
 sqlite3 *db;
@@ -50,9 +92,9 @@ void write_on_db(char *filename,char *file_path,char *mimetype,long long int fil
     sqlite3_open(db_nome,&db);
     sqlite3_stmt *comand;
     sqlite3_prepare_v2(db, "INSERT INTO files (filename, file_path, mimeType, size_bytes) VALUES ( ?, ?, ?, ?)", -1, &comand, NULL);
-    sqlite3_bind_text(comand, 1, filename, -1, SQLITE_STATIC);
-    sqlite3_bind_text(comand, 2, file_path, -1, SQLITE_STATIC);
-    sqlite3_bind_text(comand, 3, mimetype, -1, SQLITE_STATIC);
+    sqlite3_bind_text(comand, 1, filename, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(comand, 2, file_path, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(comand, 3, mimetype, -1, SQLITE_TRANSIENT);
     sqlite3_bind_int64(comand, 4, file_size);
     sqlite3_step(comand);
     sqlite3_finalize(comand);
@@ -79,7 +121,6 @@ typedef struct Task{
     char *tsk_what_frontend_wants; // to sem criatividade :)
 
     struct Task *tsk_next;
-    struct Task *tsk_prev;
     
 } Task;
 Task *inicio = NULL;
@@ -140,7 +181,7 @@ int create_socket(int *socketfd){
         return status2;
     }
 
-    if ((status3 = listen(*socketfd, 100)) != 0){
+    if ((status3 = listen(*socketfd, 10000)) != 0){
         printf("err listen\n");
         close(*socketfd);
         sleep(2);
@@ -149,24 +190,6 @@ int create_socket(int *socketfd){
     }
     return 0;
 }
-
-char* http_parser_of_type_request(char buffer[]){ // mais facil ne kkkkkkkk
-    char ch1[1] = {'\n'},ch2[1] = {' '},*temp = strdup(buffer);;
-    char *token = strtok(temp, ch1);
-    
-    return token;
-}
-
-char* http_parser_of_what_do_frontend_wants(char buffer[]){
-    char ch1[1] = {'\n'},ch2[1] = {' '},*temp = strdup(buffer);
-    char *token = strtok(temp, ch1);
-    token = strtok(NULL, ch2);
-
-    return token;
-}
-
-//--------------------------------------------------------
-
 
 // ----------------- processamento do html----------------
 
@@ -181,69 +204,30 @@ long int get_file_bytes(char* path){
     return nmr_bytes;
 }
 
-void send_text(char *path,int socketfd_client, char* mimeType){
+void send_file(char *path,int socketfd_client, int mimeType_nmbr){
     char header[] = "HTTP/1.1 200 OK\r\nContent-Type: " ;
+    char *mimeTypes[] = {"text/html","text/javascript","text/css","image/x-icon"};
     char header_buffer[4096];
     long int bytes = get_file_bytes(path);
-    snprintf(header_buffer, 4096, "%s%s; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %ld\r\n\r\n",header,mimeType,bytes);
-    send(socketfd_client, header_buffer, strlen(header_buffer), 0);
-    
+    snprintf(header_buffer, 4096, "%s%s; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %ld\r\n\r\n",header, mimeTypes[mimeType_nmbr],bytes);
+    if(send(socketfd_client, header_buffer, strlen(header_buffer), 0)<= 0 ){
+        return;
+    }
     //--------- file sending part ----------
-
-    int request_full_size = 0;
-    FILE *arq = fopen(path, "r");
-    char ch = 'a', file_buffer[20*1024];
-    while (ch!=EOF) {
-        if (request_full_size > 20*1023){
-            ch = getc(arq);
-            file_buffer[request_full_size] = ch;
-            send(socketfd_client, file_buffer, strlen(file_buffer)-1, 0);
-            request_full_size = 0;   
-        }
-        else {
-            ch = getc(arq);
-            file_buffer[request_full_size] = ch;
-            request_full_size++;
-        }
+    if (mimeType_nmbr == 0){
+        send(socketfd_client,cache_html, size_html, 0);
     }
-    if (request_full_size>0){
-        send(socketfd_client, file_buffer, strlen(file_buffer), 0);
+    if (mimeType_nmbr == 1){
+        send(socketfd_client, cache_js, size_js, 0);
     }
-    close(socketfd_client);
-    rewind(arq);
-    fclose(arq);
+    if (mimeType_nmbr == 2){
+        send(socketfd_client, cache_css, size_css, 0);
+    }
+    if (mimeType_nmbr == 3){
+        send(socketfd_client, cache_icon, size_icon, 0);
+    }
 }
-
-void send_file(char *path,int socketfd_client, char *mimeType){
-    char header[] = "HTTP/1.1 200 OK\r\nContent-Type: " ;
-    char header_buffer[4096];
-    long int bytes = get_file_bytes(path);
-    snprintf(header_buffer, 4096, "%s%s; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %ld\r\n\r\n",header,mimeType,bytes);
-    send(socketfd_client, header_buffer, strlen(header_buffer), 0);
-    //--------- file sending part ----------
-    int request_full_size = 0;
-    long int request_full_size_supremo = 0;
-    FILE *arq = fopen(path, "rb");
-    char ch = 'a', file_buffer[20*1024];
-
-    while (request_full_size_supremo!=bytes) {
-        if (request_full_size > 20*1023){
-            file_buffer[request_full_size] = ch;
-            send(socketfd_client, file_buffer, request_full_size, 0);
-            request_full_size = 0;    
-        }
-        else {
-            ch = getc(arq);
-            file_buffer[request_full_size] = ch;
-            request_full_size++;
-            request_full_size_supremo++;
-        }
-    }
-    if (request_full_size>0){
-        send(socketfd_client, file_buffer, request_full_size, 0);
-    }
-    fclose(arq);
-}
+// char *mimeTypes[] = {"text/html","text/javascript","text/css","image/x-icon"};
 
 //--------------------------------------------------------
 
@@ -339,15 +323,15 @@ void recive_file(Task *temp){
 }
 
 // -------------------------------------------------------
-
 void *routine(void* arg){
+    int index = *(int *)arg;
     while (1) {
         pthread_mutex_lock(&tsk_mutex);
         while (taskquant == 0){
             pthread_cond_wait(&tsk_thcond, &tsk_mutex);
         }
         Task *temp = inicio;
-        printf("[Request type: %s][Requested: %s][SocketFD: %d]\n\n",temp->tsk_task_connection, temp->tsk_what_frontend_wants,temp->tsk_socketfd_cliente);
+        printf("[Request type: %s][Requested: %s][SocketFD: %d][Thread: %d]\n\n",temp->tsk_task_connection, temp->tsk_what_frontend_wants,temp->tsk_socketfd_cliente,index);
         taskquant--;
 
         if (inicio->tsk_next == NULL){
@@ -362,22 +346,22 @@ void *routine(void* arg){
         // -------------  processamento de requisiçoes------------------
         if (strcmp(temp->tsk_task_connection, "GET") == 0){
             if (strcmp(temp->tsk_what_frontend_wants,"/") == 0){
-                send_text("www/index.html", temp->tsk_socketfd_cliente,mimeTypes[0]);
+                send_file("www/index.html", temp->tsk_socketfd_cliente,0);
                 close(temp->tsk_socketfd_cliente);
             }
             
             else if (strcmp(temp->tsk_what_frontend_wants,"/script.js") == 0){
-                send_text("www/script.js", temp->tsk_socketfd_cliente,mimeTypes[1]);
+                send_file("www/script.js", temp->tsk_socketfd_cliente,1);
                 close(temp->tsk_socketfd_cliente);
             }
 
             else if (strcmp(temp->tsk_what_frontend_wants,"/style.css") == 0){
-                send_text("www/style.css",temp->tsk_socketfd_cliente,mimeTypes[2]);
+                send_file("www/style.css",temp->tsk_socketfd_cliente,2);
                 close(temp->tsk_socketfd_cliente);
             }
 
             else if (strcmp(temp->tsk_what_frontend_wants,"/favicon.ico") == 0){
-                send_file("www/favicon.ico",temp->tsk_socketfd_cliente,mimeTypes[3]);
+                send_file("www/favicon.ico",temp->tsk_socketfd_cliente,3);
                 close(temp->tsk_socketfd_cliente);
             }
         }
@@ -460,28 +444,30 @@ void create_db(){
 
 int main(){
     setlocale(LC_ALL, "");
-
+    setup_caches();
     pthread_mutex_init(&tsk_mutex, NULL);
     pthread_cond_init(&tsk_thcond, NULL);
     pthread_t tid[8];
 
     int socketfd,socket_clientfd;
 
-    setIp("9888");
+    setIp("9988");
 
     struct sockaddr_storage client_conf;
     memset(&client_conf, 0, sizeof(client_conf));
     socklen_t size = sizeof(client_conf);
     int status = create_socket(&socketfd);
-    char buffer[2 * 1024 * 1024],clone_buffer[2 * 1024 * 1024], *headers,*tipo_conexao,*nome_arquivo;
+    
     printf("http://%s:%s\n\n",netinfo.addr,netinfo.port);
     int cond_create_db;
 
+    int *index_threads = malloc(8 * sizeof(int));
     for (int i = 0; i<8; i++) {
-        pthread_create(&tid[i], NULL, routine, NULL);
+        index_threads[i] = i;
+        pthread_create(&tid[i], NULL, routine, &index_threads[i]);
     }
 
-    if ((cond_create_db = mkdir("uploads", 0777)) == 0){
+    if ((cond_create_db = mkdir("uploads", 0755)) == 0){
         create_db();
         sqlite3_close(db);
     }
@@ -489,15 +475,27 @@ int main(){
         sqlite3_open(db_nome, &db);
         sqlite3_close(db);
     }
+    int teste = 0;
+    
     while (1) {
-        socket_clientfd = accept(socketfd, (struct sockaddr *)&client_conf, &size);
-        long long int req_size = recv(socket_clientfd,buffer, 2 * 1024 * 1024, 0);
-        strcpy(clone_buffer, buffer);
         
-        headers = strdup("temporario...");
+        char buffer[SIZE_BUFFER],temp_buffer_cpy[SIZE_BUFFER],clone_buffer[SIZE_BUFFER], *headers;
+        socket_clientfd = accept(socketfd, (struct sockaddr *)&client_conf, &size);
+        long long int req_size;
+        if ((req_size = recv(socket_clientfd,buffer, SIZE_BUFFER, 0)) <=0){
+            close(socket_clientfd);
+            continue;
+        }
+        
+        strcpy(clone_buffer, buffer);
+        strcpy(temp_buffer_cpy, buffer);
 
-        tipo_conexao = strdup(http_parser_of_type_request(buffer));
-        nome_arquivo = strdup(http_parser_of_what_do_frontend_wants(buffer));
+        char *tkn1 = strtok(temp_buffer_cpy, " ");
+        
+        char *tipo_conexao = strdup(tkn1);
+        tkn1 = strtok(NULL, " ");
+        char *nome_arquivo = strdup(tkn1);
+
         if (strcmp(nome_arquivo, "/upload") == 0){
             headers = strstr(clone_buffer, "<<<HEADER_END>>>");
             headers[0] = '\0';
@@ -506,6 +504,31 @@ int main(){
         addTask(req_size,buffer,clone_buffer,tipo_conexao, nome_arquivo, socket_clientfd,socketfd);
         taskquant++;
         pthread_mutex_unlock(&tsk_mutex);
+        memset(buffer, 0, SIZE_BUFFER);
+        memset(temp_buffer_cpy, 0, SIZE_BUFFER);
+        memset(clone_buffer, 0, SIZE_BUFFER);
+        free(tipo_conexao);
+        free(nome_arquivo);
         pthread_cond_signal(&tsk_thcond);
+       
     }
 }
+
+/*
+GET / HTTP/3
+Host: web.whatsapp.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br, zstd
+Alt-Used: web.whatsapp.com
+Connection: keep-alive
+Cookie: wa_ul=0890278e-ca51-4019-a196-6657fb488aea; wa_web_lang_pref=pt_BR
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Sec-Fetch-User: ?1
+Priority: u=0, i
+TE: trailers
+*/
