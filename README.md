@@ -89,3 +89,8 @@ Além disso, também pode servir arquivos estáticos (HTML, CSS, JS, favicon), t
 ## ![demo](www/readme_images/js_test.jpeg) 
 
 #### *Benchmarked using ApacheBench (50k requests, 80 concurrent connections) on an Intel i5-4300U. Performance will scale with better hardware.*
+
+## Building
+```
+gcc server.c -o server -lpthread -lsqlite3
+```
