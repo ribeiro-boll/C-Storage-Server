@@ -25,7 +25,6 @@ The server also supports serving static files (HTML, CSS, JS, favicon), making i
 - **Binary file uploads** with support for large files (no truncation/corruption)  
 - **Thread pool architecture** with task queue and workers  
 - **SQLite database** integration for file metadata management  
-- **REST API** for storage operations (upload, listing, etc.)  
 - Serving of **static frontend files** (HTML, CSS, JS, favicon)  
 - Automatic **IP and port detection** with `ifaddrs`  
 - Stable file uploads up to **1.9GB** on desktop and to **700MB** on mobile, with guaranteed data transmission
@@ -59,7 +58,6 @@ Além disso, também pode servir arquivos estáticos (HTML, CSS, JS, favicon), t
 - **Uploads de arquivos binários grandes** (sem truncar/corromper dados)  
 - **Arquitetura com thread pool** e fila de tarefas com workers  
 - Integração com **SQLite** para gerenciamento de metadados dos arquivos  
-- **API REST** para operações de armazenamento (upload, listagem, etc.)  
 - Servidor de arquivos estáticos (**HTML, CSS, JS, favicon**)  
 - Detecção automática de **IP e porta** com `ifaddrs`  
 - Aguenta uploads de até **1.9GB** em computadores e **700MB** em celulares, com estabilidade e garantia de dados 
