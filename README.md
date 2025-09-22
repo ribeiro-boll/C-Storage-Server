@@ -88,4 +88,4 @@ Além disso, também pode servir arquivos estáticos (HTML, CSS, JS, favicon), t
 - #### ~15KBs = ~230 requests/sec
 ## ![demo](www/readme_images/js_test.jpeg) 
 
-#### * the test was executed via 2 different computers, the server was hosted in my thinkpad with an i5 4th gen, so the requests/sec may vary when hosted in a pc with better specs
+#### *Benchmarked using ApacheBench (50k requests, 80 concurrent connections) on an Intel i5-4300U. Performance will scale with better hardware.*
