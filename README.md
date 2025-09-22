@@ -3,13 +3,13 @@
 
 # 📁 C-Storage-Server  
 
-![demo](www/demo.gif)  
+![demo](www/readme_images/demo.gif)  
 
 ---
 
 - *English version: [English version](#english)*  
 - *Versão pt-BR: [Versão pt-BR](#pt-br)*  
-
+- *Stress-test: [Tests](#tests)*
 ---
 
 ## English  
@@ -78,3 +78,14 @@ Além disso, também pode servir arquivos estáticos (HTML, CSS, JS, favicon), t
 ### Próximos Passos  
 - Criar uma **interface web** para download  
   
+## Tests
+
+### HTML file:
+- #### ~2KBs = ~1250 requests/sec
+## ![demo](www/readme_images/html_test.jpeg)  
+
+### Script.js file: 
+- #### ~15KBs = ~230 requests/sec
+## ![demo](www/readme_images/js_test.jpeg) 
+
+#### * the test was executed via 2 different computers, the server was hosted in my thinkpad with an i5 4th gen, so the requests/sec may vary when hosted in a pc with better specs
