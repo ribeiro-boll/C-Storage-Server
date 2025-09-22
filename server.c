@@ -513,22 +513,3 @@ int main(){
        
     }
 }
-
-/*
-GET / HTTP/3
-Host: web.whatsapp.com
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0
-Accept: text/html,application/xhtml+xml,application/xml;q=0.9,;q=0.8
-Accept-Language: en-US,en;q=0.5
-Accept-Encoding: gzip, deflate, br, zstd
-Alt-Used: web.whatsapp.com
-Connection: keep-alive
-Cookie: wa_ul=0890278e-ca51-4019-a196-6657fb488aea; wa_web_lang_pref=pt_BR
-Upgrade-Insecure-Requests: 1
-Sec-Fetch-Dest: document
-Sec-Fetch-Mode: navigate
-Sec-Fetch-Site: none
-Sec-Fetch-User: ?1
-Priority: u=0, i
-TE: trailers
-*/
