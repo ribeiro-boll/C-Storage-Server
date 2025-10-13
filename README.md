@@ -12,6 +12,11 @@
 - *Stress-test: [Tests](#tests)*
 ---
 
+## Building
+```
+gcc server.c -o server -lpthread -lsqlite3
+```
+
 ## English  
 
 ### Overview  
@@ -77,7 +82,7 @@ Além disso, também pode servir arquivos estáticos (HTML, CSS, JS, favicon), t
 - Criar uma **interface web** para download  
   
 ## Tests
-
+#### *Benchmarked using ApacheBench (50k requests, 80 concurrent connections) on an Intel i5-4300U. Performance will scale with better hardware.*
 ### HTML file:
 - #### ~2KBs = ~1250 requests/sec
 ## ![demo](www/readme_images/html_test.jpeg)  
@@ -86,9 +91,4 @@ Além disso, também pode servir arquivos estáticos (HTML, CSS, JS, favicon), t
 - #### ~15KBs = ~230 requests/sec
 ## ![demo](www/readme_images/js_test.jpeg) 
 
-#### *Benchmarked using ApacheBench (50k requests, 80 concurrent connections) on an Intel i5-4300U. Performance will scale with better hardware.*
 
-## Building
-```
-gcc server.c -o server -lpthread -lsqlite3
-```
